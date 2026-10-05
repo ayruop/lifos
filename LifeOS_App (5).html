@@ -1,0 +1,1831 @@
+<!DOCTYPE html>
+<html lang="fa" dir="rtl">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<title>Life OS — سیستم مدیریت زندگی</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Vazirmatn:wght@300;400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+/* ═══════════════════════════════════════════════════
+   TOKENS
+═══════════════════════════════════════════════════ */
+:root {
+  --navy:    #0D1B2A;
+  --navy-m:  #1B2838;
+  --navy-l:  #243447;
+  --navy-ll: #2E4057;
+  --em:      #00C896;
+  --em-d:    #009E75;
+  --amber:   #FFB627;
+  --rose:    #FF4D6D;
+  --sky:     #38B6FF;
+  --violet:  #7B5EA7;
+  --slate:   #8A9BB0;
+  --light:   #F0F4F8;
+  --white:   #FFFFFF;
+  --card:    #1B2838;
+  --border:  #2E4057;
+  --text:    #E8EDF2;
+  --text-m:  #A8B8C8;
+  --radius:  14px;
+  --radius-s:8px;
+  --shadow:  0 4px 24px rgba(0,0,0,.35);
+  --trans:   .2s ease;
+  --font:    'Vazirmatn', sans-serif;
+  --sidebar: 260px;
+}
+[data-theme="light"] {
+  --navy:   #F0F4F8; --navy-m: #E2E8F0; --navy-l: #CBD5E1;
+  --navy-ll:#B0BEC5; --card:   #FFFFFF; --border: #CBD5E1;
+  --text:   #1A2332; --text-m: #4A5568;
+}
+
+/* ═══════════════════════════════════════════════════
+   RESET & BASE
+═══════════════════════════════════════════════════ */
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;font-family:var(--font);background:var(--navy);color:var(--text);font-size:14px;line-height:1.6;-webkit-font-smoothing:antialiased}
+button{cursor:pointer;font-family:var(--font);border:none;outline:none}
+input,textarea,select{font-family:var(--font);outline:none}
+a{text-decoration:none;color:inherit}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border);border-radius:3px}
+
+/* ═══════════════════════════════════════════════════
+   AUTH SCREEN
+═══════════════════════════════════════════════════ */
+#auth-screen{
+  position:fixed;inset:0;display:flex;align-items:center;justify-content:center;
+  background:radial-gradient(ellipse at 30% 40%, #0D2840 0%, #0D1B2A 60%, #060E18 100%);
+  z-index:1000;
+}
+.auth-glow{
+  position:absolute;width:500px;height:500px;border-radius:50%;
+  background:radial-gradient(circle, rgba(0,200,150,.12) 0%, transparent 70%);
+  top:-100px;left:-100px;pointer-events:none;
+}
+.auth-box{
+  background:var(--card);border:1px solid var(--border);border-radius:20px;
+  padding:48px 40px;width:min(420px,92vw);position:relative;
+  box-shadow:0 32px 80px rgba(0,0,0,.5);
+}
+.auth-logo{
+  font-size:32px;font-weight:800;color:var(--em);letter-spacing:-1px;
+  margin-bottom:4px;
+}
+.auth-logo span{color:var(--amber)}
+.auth-sub{color:var(--text-m);font-size:13px;margin-bottom:36px}
+.auth-tabs{display:flex;gap:4px;background:var(--navy-l);border-radius:10px;padding:4px;margin-bottom:28px}
+.auth-tab{
+  flex:1;padding:8px;border-radius:8px;text-align:center;
+  cursor:pointer;font-size:13px;font-weight:500;color:var(--text-m);
+  transition:var(--trans);
+}
+.auth-tab.active{background:var(--em);color:#000;font-weight:700}
+.field{margin-bottom:16px}
+.field label{display:block;font-size:12px;color:var(--text-m);margin-bottom:6px;font-weight:500}
+.field input{
+  width:100%;padding:12px 16px;background:var(--navy-l);border:1.5px solid var(--border);
+  border-radius:var(--radius-s);color:var(--text);font-size:14px;
+  transition:border-color var(--trans);
+}
+.field input:focus{border-color:var(--em)}
+.btn-primary{
+  width:100%;padding:14px;background:var(--em);color:#000;
+  border-radius:var(--radius-s);font-size:15px;font-weight:700;
+  transition:all var(--trans);margin-top:8px;
+}
+.btn-primary:hover{background:var(--em-d);transform:translateY(-1px);box-shadow:0 6px 20px rgba(0,200,150,.3)}
+.btn-primary:active{transform:translateY(0)}
+.auth-msg{margin-top:14px;padding:10px 14px;border-radius:var(--radius-s);font-size:13px;display:none}
+.auth-msg.err{background:rgba(255,77,109,.15);color:var(--rose);border:1px solid rgba(255,77,109,.3)}
+.auth-msg.ok{background:rgba(0,200,150,.15);color:var(--em);border:1px solid rgba(0,200,150,.3)}
+
+/* ═══════════════════════════════════════════════════
+   APP LAYOUT
+═══════════════════════════════════════════════════ */
+#app{display:none;height:100%;flex-direction:row}
+#app.visible{display:flex}
+
+/* Sidebar */
+#sidebar{
+  width:var(--sidebar);min-width:var(--sidebar);height:100vh;
+  background:var(--navy-m);border-left:1px solid var(--border);
+  display:flex;flex-direction:column;overflow:hidden;
+  position:relative;z-index:10;
+}
+.sidebar-header{padding:20px 16px 16px;border-bottom:1px solid var(--border)}
+.sidebar-brand{font-size:18px;font-weight:800;color:var(--em)}
+.sidebar-brand span{color:var(--amber)}
+.sidebar-user{
+  display:flex;align-items:center;gap:10px;padding:14px 16px;
+  border-bottom:1px solid var(--border);
+}
+.user-avatar{
+  width:36px;height:36px;border-radius:50%;background:linear-gradient(135deg,var(--em),var(--sky));
+  display:flex;align-items:center;justify-content:center;font-size:15px;font-weight:700;color:#000;flex-shrink:0;
+}
+.user-name{font-size:13px;font-weight:600;color:var(--text)}
+.user-status{font-size:11px;color:var(--em)}
+.sidebar-nav{flex:1;overflow-y:auto;padding:8px 8px}
+.nav-section{margin-bottom:4px}
+.nav-section-label{
+  font-size:10px;font-weight:600;color:var(--text-m);letter-spacing:.8px;
+  padding:8px 10px 4px;text-transform:uppercase;
+}
+.nav-item{
+  display:flex;align-items:center;gap:10px;padding:9px 12px;
+  border-radius:10px;cursor:pointer;font-size:13px;font-weight:500;
+  color:var(--text-m);transition:all var(--trans);margin-bottom:1px;
+  position:relative;
+}
+.nav-item:hover{background:var(--navy-l);color:var(--text)}
+.nav-item.active{background:linear-gradient(135deg,rgba(0,200,150,.2),rgba(56,182,255,.1));color:var(--em);font-weight:600}
+.nav-item.active::before{
+  content:'';position:absolute;right:0;top:50%;transform:translateY(-50%);
+  width:3px;height:60%;background:var(--em);border-radius:2px 0 0 2px;
+}
+.nav-icon{font-size:16px;width:20px;text-align:center}
+.sidebar-footer{padding:12px;border-top:1px solid var(--border)}
+.theme-toggle{
+  display:flex;align-items:center;gap:8px;padding:8px 12px;
+  border-radius:var(--radius-s);background:var(--navy-l);cursor:pointer;
+  font-size:12px;color:var(--text-m);transition:var(--trans);
+}
+.theme-toggle:hover{color:var(--text)}
+
+/* Main content */
+#main{flex:1;height:100vh;overflow-y:auto;display:flex;flex-direction:column}
+.topbar{
+  display:flex;align-items:center;justify-content:space-between;
+  padding:14px 24px;background:var(--navy-m);border-bottom:1px solid var(--border);
+  position:sticky;top:0;z-index:5;
+}
+.topbar-title{font-size:16px;font-weight:700}
+.topbar-date{font-size:12px;color:var(--text-m)}
+.topbar-actions{display:flex;gap:8px;align-items:center}
+.btn-icon{
+  width:34px;height:34px;border-radius:var(--radius-s);
+  background:var(--navy-l);display:flex;align-items:center;justify-content:center;
+  font-size:16px;cursor:pointer;transition:var(--trans);color:var(--text-m);
+}
+.btn-icon:hover{background:var(--border);color:var(--text)}
+
+/* Pages */
+.page{display:none;padding:20px 24px;flex:1}
+.page.active{display:block}
+
+/* ═══════════════════════════════════════════════════
+   CARDS & GRID
+═══════════════════════════════════════════════════ */
+.grid{display:grid;gap:16px}
+.grid-2{grid-template-columns:repeat(2,1fr)}
+.grid-3{grid-template-columns:repeat(3,1fr)}
+.grid-4{grid-template-columns:repeat(4,1fr)}
+.card{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:18px;
+}
+.card-title{font-size:12px;font-weight:600;color:var(--text-m);margin-bottom:12px;text-transform:uppercase;letter-spacing:.5px}
+.kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.kpi{
+  background:var(--card);border:1px solid var(--border);
+  border-radius:var(--radius);padding:16px;position:relative;overflow:hidden;
+}
+.kpi::before{
+  content:'';position:absolute;top:0;left:0;right:0;height:3px;
+  background:var(--accent, var(--em));
+}
+.kpi-label{font-size:11px;color:var(--text-m);margin-bottom:6px;font-weight:500}
+.kpi-val{font-size:24px;font-weight:800;color:var(--text);line-height:1}
+.kpi-sub{font-size:11px;color:var(--text-m);margin-top:4px}
+
+/* ═══════════════════════════════════════════════════
+   DASHBOARD
+═══════════════════════════════════════════════════ */
+.dash-hero{
+  background:linear-gradient(135deg,var(--navy-m) 0%,var(--navy-l) 100%);
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;margin-bottom:20px;position:relative;overflow:hidden;
+}
+.dash-hero::after{
+  content:'';position:absolute;top:-40px;left:-40px;
+  width:200px;height:200px;border-radius:50%;
+  background:radial-gradient(circle,rgba(0,200,150,.15) 0%,transparent 70%);
+  pointer-events:none;
+}
+.hero-greeting{font-size:22px;font-weight:800;margin-bottom:4px}
+.hero-greeting span{color:var(--em)}
+.hero-date{font-size:13px;color:var(--text-m)}
+.hero-quote{
+  margin-top:16px;padding:12px 16px;border-right:3px solid var(--amber);
+  background:rgba(255,182,39,.08);border-radius:0 var(--radius-s) var(--radius-s) 0;
+  font-size:13px;color:var(--text-m);font-style:italic;
+}
+
+/* Capacity bar */
+.capacity-wrap{margin-bottom:20px}
+.capacity-bar-bg{height:8px;background:var(--border);border-radius:4px;overflow:hidden;margin-top:6px}
+.capacity-bar-fill{height:100%;border-radius:4px;transition:width .5s ease;background:var(--em)}
+.capacity-bar-fill.over{background:var(--rose)}
+
+/* ═══════════════════════════════════════════════════
+   DAILY PLANNER
+═══════════════════════════════════════════════════ */
+.top3-grid{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-bottom:20px}
+.top3-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;position:relative;overflow:hidden;
+}
+.top3-card:nth-child(1)::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--em)}
+.top3-card:nth-child(2)::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--amber)}
+.top3-card:nth-child(3)::before{content:'';position:absolute;top:0;left:0;right:0;height:3px;background:var(--rose)}
+.top3-label{font-size:10px;font-weight:600;color:var(--text-m);margin-bottom:8px}
+.top3-input{
+  width:100%;background:transparent;border:none;color:var(--text);
+  font-size:13px;font-weight:500;resize:none;line-height:1.4;min-height:50px;
+}
+.top3-status{
+  display:flex;gap:6px;margin-top:8px;flex-wrap:wrap;
+}
+.status-chip{
+  padding:3px 8px;border-radius:20px;font-size:10px;font-weight:600;cursor:pointer;
+  border:1px solid var(--border);color:var(--text-m);transition:var(--trans);
+}
+.status-chip.done{background:rgba(0,200,150,.2);color:var(--em);border-color:var(--em)}
+
+/* Task table */
+.task-table{width:100%;border-collapse:collapse}
+.task-table th{
+  text-align:right;padding:8px 12px;font-size:11px;font-weight:600;
+  color:var(--text-m);border-bottom:1px solid var(--border);
+}
+.task-row{border-bottom:1px solid rgba(46,64,87,.5);transition:background var(--trans)}
+.task-row:hover{background:var(--navy-l)}
+.task-row.done-row{opacity:.6}
+.task-row td{padding:10px 12px}
+.task-cell-input{
+  background:transparent;border:none;color:var(--text);font-size:13px;
+  width:100%;font-family:var(--font);
+}
+.task-cell-input::placeholder{color:var(--text-m)}
+.badge{
+  display:inline-flex;align-items:center;padding:3px 8px;border-radius:20px;
+  font-size:10px;font-weight:600;
+}
+.badge-red{background:rgba(255,77,109,.15);color:var(--rose)}
+.badge-amber{background:rgba(255,182,39,.15);color:var(--amber)}
+.badge-green{background:rgba(0,200,150,.15);color:var(--em)}
+.badge-blue{background:rgba(56,182,255,.15);color:var(--sky)}
+select.cell-select{
+  background:transparent;border:none;color:var(--text-m);font-size:12px;
+  font-family:var(--font);cursor:pointer;
+}
+select.cell-select:focus{outline:none}
+option{background:var(--navy-m)}
+
+/* ═══════════════════════════════════════════════════
+   HABIT TRACKER
+═══════════════════════════════════════════════════ */
+.habit-grid{display:flex;flex-direction:column;gap:8px}
+.habit-row{
+  display:flex;align-items:center;gap:8px;padding:10px 14px;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);
+}
+.habit-name{flex:0 0 160px;font-size:13px;font-weight:500}
+.habit-dots{display:flex;gap:4px;flex:1}
+.habit-dot{
+  width:28px;height:28px;border-radius:6px;border:1.5px solid var(--border);
+  display:flex;align-items:center;justify-content:center;font-size:12px;
+  cursor:pointer;transition:all var(--trans);color:var(--text-m);
+  flex-shrink:0;
+}
+.habit-dot.done{background:rgba(0,200,150,.2);border-color:var(--em);color:var(--em)}
+.habit-dot.fail{background:rgba(255,77,109,.15);border-color:var(--rose);color:var(--rose)}
+.habit-dot.skip{background:rgba(255,182,39,.1);border-color:var(--amber);color:var(--amber)}
+.habit-streak{flex:0 0 80px;text-align:center}
+.streak-num{font-size:18px;font-weight:800;color:var(--amber)}
+.streak-label{font-size:10px;color:var(--text-m)}
+.habit-bar{flex:0 0 100px}
+.h-bar-bg{height:6px;background:var(--border);border-radius:3px}
+.h-bar-fill{height:100%;border-radius:3px;background:var(--em);transition:width .4s}
+
+/* ═══════════════════════════════════════════════════
+   FINANCE
+═══════════════════════════════════════════════════ */
+.finance-kpis{display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:20px}
+.fin-kpi{
+  padding:18px;border-radius:var(--radius);border:1px solid var(--border);
+  background:var(--card);
+}
+.fin-kpi-label{font-size:11px;color:var(--text-m);margin-bottom:4px}
+.fin-kpi-val{font-size:20px;font-weight:800}
+.fin-kpi-val.income{color:var(--em)}
+.fin-kpi-val.expense{color:var(--rose)}
+.fin-kpi-val.balance{color:var(--sky)}
+.add-transaction{
+  display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px;
+  padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+}
+.add-transaction input,.add-transaction select{
+  flex:1;min-width:120px;padding:9px 12px;background:var(--navy-l);
+  border:1.5px solid var(--border);border-radius:var(--radius-s);
+  color:var(--text);font-size:13px;
+}
+.add-transaction input:focus,.add-transaction select:focus{border-color:var(--em)}
+.btn-add{
+  padding:9px 18px;background:var(--em);color:#000;border-radius:var(--radius-s);
+  font-size:13px;font-weight:700;white-space:nowrap;transition:var(--trans);
+}
+.btn-add:hover{background:var(--em-d)}
+.trans-list{display:flex;flex-direction:column;gap:4px}
+.trans-item{
+  display:flex;align-items:center;gap:10px;padding:10px 14px;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);
+}
+.trans-type{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+.trans-type.income{background:var(--em)}
+.trans-type.expense{background:var(--rose)}
+.trans-desc{flex:1;font-size:13px}
+.trans-cat{font-size:11px;color:var(--text-m);padding:2px 7px;background:var(--navy-l);border-radius:20px}
+.trans-amount{font-size:14px;font-weight:700}
+.trans-amount.income{color:var(--em)}
+.trans-amount.expense{color:var(--rose)}
+.trans-date{font-size:11px;color:var(--text-m);flex:0 0 80px;text-align:left}
+
+/* ═══════════════════════════════════════════════════
+   GOAL 100 DAYS
+═══════════════════════════════════════════════════ */
+.goal-hero{
+  background:linear-gradient(135deg,var(--navy-l),var(--navy-m));
+  border:1px solid var(--border);border-radius:var(--radius);
+  padding:24px;margin-bottom:20px;
+}
+.goal-title{font-size:20px;font-weight:800;margin-bottom:4px}
+.goal-days{font-size:13px;color:var(--text-m);margin-bottom:16px}
+.progress-bar{height:12px;background:var(--border);border-radius:6px;overflow:hidden;margin-bottom:8px}
+.progress-fill{height:100%;background:linear-gradient(90deg,var(--em-d),var(--em));transition:width .6s ease}
+.progress-labels{display:flex;justify-content:space-between;font-size:12px;color:var(--text-m)}
+.forecast{
+  display:flex;gap:12px;margin-top:16px;flex-wrap:wrap;
+}
+.forecast-chip{
+  padding:8px 14px;background:rgba(255,182,39,.1);border:1px solid rgba(255,182,39,.3);
+  border-radius:var(--radius-s);font-size:12px;color:var(--amber);
+}
+
+/* ═══════════════════════════════════════════════════
+   JOURNAL
+═══════════════════════════════════════════════════ */
+.mood-picker{display:flex;gap:8px;flex-wrap:wrap;margin-bottom:16px}
+.mood-btn{
+  padding:8px 14px;border-radius:20px;border:1.5px solid var(--border);
+  font-size:13px;cursor:pointer;transition:all var(--trans);background:transparent;color:var(--text-m);
+}
+.mood-btn.selected{background:rgba(0,200,150,.15);border-color:var(--em);color:var(--em)}
+.journal-textarea{
+  width:100%;min-height:140px;padding:14px;background:var(--navy-l);
+  border:1.5px solid var(--border);border-radius:var(--radius-s);
+  color:var(--text);font-size:14px;resize:vertical;line-height:1.7;
+  transition:border-color var(--trans);
+}
+.journal-textarea:focus{border-color:var(--em)}
+.win-inputs{display:flex;flex-direction:column;gap:8px;margin-bottom:16px}
+.win-item{
+  display:flex;align-items:center;gap:8px;
+}
+.win-num{
+  width:24px;height:24px;border-radius:50%;background:var(--amber);
+  color:#000;font-size:11px;font-weight:800;display:flex;align-items:center;justify-content:center;flex-shrink:0;
+}
+.win-input{
+  flex:1;padding:9px 12px;background:var(--navy-l);border:1.5px solid var(--border);
+  border-radius:var(--radius-s);color:var(--text);font-size:13px;
+}
+.win-input:focus{border-color:var(--amber)}
+
+/* ═══════════════════════════════════════════════════
+   STREAK
+═══════════════════════════════════════════════════ */
+.streak-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:12px}
+.streak-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;
+}
+.streak-name{font-size:13px;font-weight:600;margin-bottom:10px}
+.streak-big{font-size:36px;font-weight:800;color:var(--amber);line-height:1}
+.streak-sub{font-size:11px;color:var(--text-m);margin-top:2px}
+.streak-bar-bg{height:6px;background:var(--border);border-radius:3px;margin-top:10px}
+.streak-bar-fill{height:100%;border-radius:3px;background:linear-gradient(90deg,var(--amber),var(--rose))}
+
+/* ═══════════════════════════════════════════════════
+   MOOD CHART
+═══════════════════════════════════════════════════ */
+.mood-form{display:grid;grid-template-columns:repeat(2,1fr);gap:12px;margin-bottom:20px}
+.mood-metric{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:14px}
+.mood-metric-label{font-size:11px;color:var(--text-m);margin-bottom:8px}
+.mood-slider{-webkit-appearance:none;width:100%;height:6px;border-radius:3px;background:var(--border);outline:none}
+.mood-slider::-webkit-slider-thumb{-webkit-appearance:none;width:18px;height:18px;border-radius:50%;background:var(--em);cursor:pointer}
+.mood-val{font-size:22px;font-weight:800;color:var(--em);text-align:center;margin-top:6px}
+.chart-area{background:var(--card);border:1px solid var(--border);border-radius:var(--radius);padding:18px}
+.mini-chart{display:flex;align-items:flex-end;gap:3px;height:80px;margin-top:10px}
+.chart-bar{flex:1;border-radius:3px 3px 0 0;min-height:4px;transition:height .4s}
+.chart-bar.mood-bar{background:linear-gradient(180deg,var(--rose),var(--violet))}
+.chart-bar.energy-bar{background:linear-gradient(180deg,var(--em),var(--sky))}
+
+/* ═══════════════════════════════════════════════════
+   IDEAS BANK
+═══════════════════════════════════════════════════ */
+.idea-input-area{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:16px;margin-bottom:16px;
+}
+.idea-input{
+  width:100%;padding:12px;background:var(--navy-l);border:1.5px solid var(--border);
+  border-radius:var(--radius-s);color:var(--text);font-size:14px;
+  resize:none;min-height:80px;line-height:1.6;
+}
+.idea-input:focus{border-color:var(--violet)}
+.idea-meta{display:flex;gap:8px;margin-top:10px;flex-wrap:wrap;align-items:center}
+.idea-cards{display:grid;grid-template-columns:repeat(2,1fr);gap:10px}
+.idea-card{
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+  padding:14px;cursor:pointer;transition:border-color var(--trans);
+}
+.idea-card:hover{border-color:var(--violet)}
+.idea-card-text{font-size:13px;margin-bottom:8px;line-height:1.5}
+.idea-card-meta{display:flex;gap:6px;align-items:center;flex-wrap:wrap}
+
+/* ═══════════════════════════════════════════════════
+   TASKS / FOCUS MODE
+═══════════════════════════════════════════════════ */
+.task-add-form{
+  display:flex;gap:8px;flex-wrap:wrap;margin-bottom:14px;
+  padding:14px;background:var(--card);border:1px solid var(--border);border-radius:var(--radius);
+}
+.task-add-form input,.task-add-form select{
+  flex:1;min-width:120px;padding:9px 12px;background:var(--navy-l);
+  border:1.5px solid var(--border);border-radius:var(--radius-s);color:var(--text);font-size:13px;
+}
+.task-add-form input:focus,.task-add-form select:focus{border-color:var(--sky)}
+.task-items{display:flex;flex-direction:column;gap:6px}
+.task-item{
+  display:flex;align-items:center;gap:10px;padding:12px 14px;
+  background:var(--card);border:1px solid var(--border);border-radius:var(--radius-s);
+  transition:all var(--trans);
+}
+.task-item.locked-item{opacity:.5;pointer-events:none}
+.task-check{
+  width:20px;height:20px;border-radius:6px;border:2px solid var(--border);
+  display:flex;align-items:center;justify-content:center;cursor:pointer;
+  flex-shrink:0;transition:all var(--trans);
+}
+.task-check.checked{background:var(--em);border-color:var(--em);color:#000;font-size:12px}
+.task-locked-badge{
+  background:rgba(255,77,109,.15);color:var(--rose);
+  padding:2px 8px;border-radius:20px;font-size:10px;font-weight:600;
+}
+.prereq-blocked{background:rgba(255,77,109,.1);border-color:rgba(255,77,109,.3)}
+.prereq-blocked .task-check{background:var(--border);cursor:not-allowed}
+
+/* ═══════════════════════════════════════════════════
+   SETTINGS / CONTROL PANEL
+═══════════════════════════════════════════════════ */
+.settings-section{margin-bottom:24px}
+.settings-section h3{font-size:14px;font-weight:700;margin-bottom:12px;color:var(--text)}
+.settings-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+.settings-label{font-size:13px;color:var(--text-m)}
+.settings-input{
+  padding:8px 12px;background:var(--navy-l);border:1.5px solid var(--border);
+  border-radius:var(--radius-s);color:var(--text);font-size:13px;min-width:160px;
+}
+.settings-input:focus{border-color:var(--em)}
+.habit-list-editor{display:flex;flex-direction:column;gap:6px}
+.habit-edit-item{
+  display:flex;gap:6px;align-items:center;
+}
+.habit-edit-input{
+  flex:1;padding:8px 10px;background:var(--navy-l);border:1.5px solid var(--border);
+  border-radius:var(--radius-s);color:var(--text);font-size:13px;
+}
+.habit-edit-input:focus{border-color:var(--em)}
+.color-picker-row{display:flex;gap:8px;flex-wrap:wrap;margin-top:6px}
+.color-swatch{
+  width:32px;height:32px;border-radius:8px;cursor:pointer;
+  border:2px solid transparent;transition:all var(--trans);
+}
+.color-swatch.selected{border-color:var(--text);transform:scale(1.1)}
+.btn-save-settings{
+  padding:10px 24px;background:var(--em);color:#000;border-radius:var(--radius-s);
+  font-size:14px;font-weight:700;transition:var(--trans);
+}
+.btn-save-settings:hover{background:var(--em-d)}
+
+/* ═══════════════════════════════════════════════════
+   LOCK OVERLAY
+═══════════════════════════════════════════════════ */
+.lock-banner{
+  display:flex;align-items:center;gap:10px;padding:12px 16px;
+  background:rgba(255,77,109,.12);border:1px solid rgba(255,77,109,.3);
+  border-radius:var(--radius-s);margin-bottom:16px;
+  font-size:13px;color:var(--rose);
+}
+
+/* ═══════════════════════════════════════════════════
+   TOAST
+═══════════════════════════════════════════════════ */
+#toast{
+  position:fixed;bottom:24px;left:50%;transform:translateX(-50%) translateY(80px);
+  background:var(--navy-l);border:1px solid var(--border);
+  padding:12px 20px;border-radius:var(--radius-s);font-size:13px;
+  box-shadow:var(--shadow);z-index:9999;transition:transform .3s ease;
+  white-space:nowrap;
+}
+#toast.show{transform:translateX(-50%) translateY(0)}
+#toast.success{border-color:var(--em);color:var(--em)}
+#toast.error{border-color:var(--rose);color:var(--rose)}
+
+/* ═══════════════════════════════════════════════════
+   LOADING
+═══════════════════════════════════════════════════ */
+.loading{
+  display:flex;align-items:center;justify-content:center;
+  height:200px;flex-direction:column;gap:12px;color:var(--text-m);
+}
+.spinner{
+  width:32px;height:32px;border:3px solid var(--border);
+  border-top-color:var(--em);border-radius:50%;
+  animation:spin .8s linear infinite;
+}
+@keyframes spin{to{transform:rotate(360deg)}}
+
+/* ═══════════════════════════════════════════════════
+   RESPONSIVE
+═══════════════════════════════════════════════════ */
+@media(max-width:768px){
+  :root{--sidebar:0px}
+  #sidebar{position:fixed;right:-280px;transition:right .3s;z-index:100;width:280px}
+  #sidebar.open{right:0}
+  .kpi-grid,.grid-4{grid-template-columns:repeat(2,1fr)}
+  .grid-3,.grid-2{grid-template-columns:1fr}
+  .top3-grid,.streak-cards,.idea-cards,.mood-form,.finance-kpis{grid-template-columns:1fr}
+  .page{padding:14px 14px}
+}
+
+/* ═══════════════════════════════════════════════════
+   MISC
+═══════════════════════════════════════════════════ */
+.divider{height:1px;background:var(--border);margin:16px 0}
+.flex-row{display:flex;align-items:center;gap:10px}
+.flex-1{flex:1}
+.text-em{color:var(--em)} .text-amber{color:var(--amber)} .text-rose{color:var(--rose)}
+.text-sm{font-size:12px} .text-xs{font-size:11px} .fw-700{font-weight:700}
+.mt-8{margin-top:8px} .mt-12{margin-top:12px} .mt-16{margin-top:16px}
+.mb-8{margin-bottom:8px} .mb-12{margin-bottom:12px} .mb-16{margin-bottom:16px}
+.btn-outline{
+  padding:8px 16px;border:1.5px solid var(--border);border-radius:var(--radius-s);
+  background:transparent;color:var(--text-m);font-size:12px;font-weight:600;
+  transition:all var(--trans);cursor:pointer;
+}
+.btn-outline:hover{border-color:var(--em);color:var(--em)}
+.empty-state{
+  text-align:center;padding:40px;color:var(--text-m);
+}
+.empty-state .empty-icon{font-size:40px;margin-bottom:10px}
+.empty-state p{font-size:13px}
+</style>
+</head>
+<body>
+
+<!-- ══════════════════════════════════════════════════════
+     AUTH
+══════════════════════════════════════════════════════ -->
+<div id="auth-screen">
+  <div class="auth-glow"></div>
+  <div class="auth-box">
+    <div class="auth-logo">Life<span>OS</span></div>
+    <div class="auth-sub">سیستم مدیریت زندگی شخصی</div>
+    <div class="auth-tabs">
+      <div class="auth-tab active" onclick="switchTab('login')">ورود</div>
+      <div class="auth-tab" onclick="switchTab('register')">ثبت‌نام</div>
+    </div>
+    <div id="login-form">
+      <div class="field"><label>نام کاربری</label><input type="text" id="login-user" placeholder="نام کاربری خود را وارد کنید"></div>
+      <div class="field"><label>رمز عبور</label><input type="password" id="login-pass" placeholder="••••••••"></div>
+      <button class="btn-primary" onclick="doLogin()">ورود به سیستم</button>
+    </div>
+    <div id="register-form" style="display:none">
+      <div class="field"><label>نام کاربری (حداقل ۳ حرف)</label><input type="text" id="reg-user" placeholder="یک نام منحصربه‌فرد انتخاب کن"></div>
+      <div class="field"><label>رمز عبور (حداقل ۶ کاراکتر)</label><input type="password" id="reg-pass" placeholder="••••••••"></div>
+      <div class="field"><label>تکرار رمز عبور</label><input type="password" id="reg-pass2" placeholder="••••••••"></div>
+      <button class="btn-primary" onclick="doRegister()">ساخت حساب کاربری</button>
+    </div>
+    <div class="auth-msg" id="auth-msg"></div>
+  </div>
+</div>
+
+<!-- ══════════════════════════════════════════════════════
+     APP
+══════════════════════════════════════════════════════ -->
+<div id="app">
+  <!-- Sidebar -->
+  <nav id="sidebar">
+    <div class="sidebar-header">
+      <div class="sidebar-brand">Life<span>OS</span></div>
+    </div>
+    <div class="sidebar-user">
+      <div class="user-avatar" id="user-avatar">U</div>
+      <div>
+        <div class="user-name" id="user-name-display">کاربر</div>
+        <div class="user-status">● آنلاین</div>
+      </div>
+    </div>
+    <div class="sidebar-nav">
+      <div class="nav-section">
+        <div class="nav-section-label">اصلی</div>
+        <div class="nav-item active" onclick="showPage('dashboard')"><span class="nav-icon">🏠</span>داشبورد</div>
+        <div class="nav-item" onclick="showPage('daily')"><span class="nav-icon">📅</span>پلنر روزانه</div>
+        <div class="nav-item" onclick="showPage('focus')"><span class="nav-icon">🎯</span>Focus Mode</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">ردیابی</div>
+        <div class="nav-item" onclick="showPage('habits')"><span class="nav-icon">📋</span>تراکر عادت</div>
+        <div class="nav-item" onclick="showPage('streak')"><span class="nav-icon">🔥</span>Streak</div>
+        <div class="nav-item" onclick="showPage('mood')"><span class="nav-icon">🌡️</span>خلق و انرژی</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">هدف و رشد</div>
+        <div class="nav-item" onclick="showPage('goal100')"><span class="nav-icon">🎯</span>هدف ۱۰۰ روزه</div>
+        <div class="nav-item" onclick="showPage('journal')"><span class="nav-icon">📓</span>Journal</div>
+        <div class="nav-item" onclick="showPage('ideas')"><span class="nav-icon">💡</span>Idea Bank</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">مالی</div>
+        <div class="nav-item" onclick="showPage('finance')"><span class="nav-icon">💰</span>مدیریت مالی</div>
+      </div>
+      <div class="nav-section">
+        <div class="nav-section-label">تنظیمات</div>
+        <div class="nav-item" onclick="showPage('settings')"><span class="nav-icon">⚙️</span>تنظیمات</div>
+        <div class="nav-item" onclick="doLogout()"><span class="nav-icon">🚪</span>خروج</div>
+      </div>
+    </div>
+    <div class="sidebar-footer">
+      <div class="theme-toggle" onclick="toggleTheme()">
+        <span id="theme-icon">🌙</span>
+        <span id="theme-label">حالت تاریک</span>
+      </div>
+    </div>
+  </nav>
+
+  <!-- Main -->
+  <div id="main">
+    <div class="topbar">
+      <div>
+        <div class="topbar-title" id="topbar-title">داشبورد</div>
+        <div class="topbar-date" id="topbar-date"></div>
+      </div>
+      <div class="topbar-actions">
+        <div class="btn-icon" onclick="saveCurrentPage()" title="ذخیره">💾</div>
+        <div class="btn-icon" id="menu-btn" onclick="toggleSidebar()" style="display:none">☰</div>
+      </div>
+    </div>
+
+    <!-- ───── DASHBOARD ───── -->
+    <div class="page active" id="page-dashboard">
+      <div class="dash-hero">
+        <div class="hero-greeting">سلام، <span id="dash-username">کاربر</span> 👋</div>
+        <div class="hero-date" id="dash-date"></div>
+        <div class="hero-quote" id="daily-quote">"انضباط یعنی انتخاب بین آنچه الان می‌خواهی و آنچه بیشتر از همه می‌خواهی."</div>
+      </div>
+      <div class="kpi-grid" id="dash-kpis">
+        <div class="kpi" style="--accent:var(--sky)"><div class="kpi-label">📋 کارهای امروز</div><div class="kpi-val" id="kpi-tasks">—</div></div>
+        <div class="kpi" style="--accent:var(--em)"><div class="kpi-label">✅ انجام شده</div><div class="kpi-val" id="kpi-done">—</div></div>
+        <div class="kpi" style="--accent:var(--amber)"><div class="kpi-label">🔥 بهترین Streak</div><div class="kpi-val" id="kpi-streak">—</div></div>
+        <div class="kpi" style="--accent:var(--violet)"><div class="kpi-label">💰 تراز ماه</div><div class="kpi-val" id="kpi-balance">—</div></div>
+      </div>
+      <div class="card mb-16">
+        <div class="card-title">⚡ Capacity امروز</div>
+        <div class="flex-row">
+          <span class="text-sm text-em" id="cap-label">محاسبه...</span>
+          <div style="flex:1;margin:0 12px">
+            <div class="capacity-bar-bg"><div class="capacity-bar-fill" id="cap-bar" style="width:0%"></div></div>
+          </div>
+          <span class="text-sm text-amber" id="cap-warn"></span>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-title">🎯 Top 3 امروز</div>
+          <div id="dash-top3"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+        <div class="card">
+          <div class="card-title">💪 عادت‌های امروز</div>
+          <div id="dash-habits"><div class="loading"><div class="spinner"></div></div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── DAILY PLANNER ───── -->
+    <div class="page" id="page-daily">
+      <div id="daily-lock-banner" style="display:none" class="lock-banner">🔒 این روز قفل شده و قابل ویرایش نیست</div>
+      <div class="top3-grid">
+        <div class="top3-card"><div class="top3-label">🥇 کار اول (مهم‌ترین)</div><textarea class="top3-input" id="top1" placeholder="مهم‌ترین کار امروزت..."></textarea><div class="top3-status"><span class="status-chip" onclick="toggleTop(1)">انجام شد</span></div></div>
+        <div class="top3-card"><div class="top3-label">🥈 کار دوم</div><textarea class="top3-input" id="top2" placeholder="دومین کار مهم..."></textarea><div class="top3-status"><span class="status-chip" onclick="toggleTop(2)">انجام شد</span></div></div>
+        <div class="top3-card"><div class="top3-label">🥉 کار سوم</div><textarea class="top3-input" id="top3" placeholder="سومین کار مهم..."></textarea><div class="top3-status"><span class="status-chip" onclick="toggleTop(3)">انجام شد</span></div></div>
+      </div>
+      <div class="card mb-16">
+        <div class="flex-row mb-12">
+          <div class="card-title" style="margin-bottom:0;flex:1">📋 لیست کارها</div>
+          <button class="btn-outline" onclick="addTaskRow()">+ افزودن کار</button>
+        </div>
+        <div style="overflow-x:auto">
+          <table class="task-table">
+            <thead><tr>
+              <th>⏰ ساعت</th><th style="min-width:200px">📌 کار</th><th>🏷️ دسته</th>
+              <th>⚡ اولویت</th><th>⏱️ دقیقه</th><th>✅ وضعیت</th><th></th>
+            </tr></thead>
+            <tbody id="task-tbody"></tbody>
+          </table>
+        </div>
+      </div>
+      <div class="card">
+        <div class="card-title">🌙 Daily Shutdown — مرور شبانه</div>
+        <div class="grid grid-2" style="gap:10px">
+          <div><label class="text-xs text-sm" style="color:var(--text-m);display:block;margin-bottom:4px">📋 کارهای ناتمام:</label><textarea class="journal-textarea" style="min-height:70px" id="sd-unfinished" placeholder="چه کارهایی ناتمام ماند؟"></textarea></div>
+          <div><label class="text-xs text-sm" style="color:var(--text-m);display:block;margin-bottom:4px">🌟 بهترین لحظه امروز:</label><textarea class="journal-textarea" style="min-height:70px" id="sd-best" placeholder="بهترین اتفاق امروز چی بود؟"></textarea></div>
+          <div><label class="text-xs text-sm" style="color:var(--text-m);display:block;margin-bottom:4px">📅 برنامه مهم فردا:</label><textarea class="journal-textarea" style="min-height:70px" id="sd-tomorrow" placeholder="فردا چه کار مهمی داری؟"></textarea></div>
+          <div><label class="text-xs text-sm" style="color:var(--text-m);display:block;margin-bottom:4px">⭐ امتیاز روز (۱-۱۰):</label><input type="range" class="mood-slider" min="1" max="10" value="7" id="sd-score" oninput="document.getElementById('sd-score-val').textContent=this.value"><div class="mood-val" id="sd-score-val">7</div></div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── FOCUS MODE ───── -->
+    <div class="page" id="page-focus">
+      <div class="card mb-16">
+        <div class="card-title">🎯 Task Dependency — وابستگی بین کارها</div>
+        <div class="task-add-form">
+          <input type="text" id="focus-title" placeholder="عنوان کار...">
+          <select id="focus-cat"><option value="">دسته...</option></select>
+          <select id="focus-pri"><option value="🟡 متوسط">🟡 متوسط</option><option value="🔴 فوری">🔴 فوری</option><option value="🟠 بالا">🟠 بالا</option><option value="🟢 پایین">🟢 پایین</option></select>
+          <input type="number" id="focus-prereq" placeholder="پیش‌نیاز (شماره)" min="0" style="max-width:130px">
+          <input type="number" id="focus-duration" placeholder="دقیقه" style="max-width:100px">
+          <button class="btn-add" onclick="addFocusTask()">+ افزودن</button>
+        </div>
+        <div class="task-items" id="focus-list"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">⚠️ کارهای عقب‌افتاده — تصمیم بگیر</div>
+        <div id="stalled-tasks"><div class="empty-state"><div class="empty-icon">✅</div><p>هیچ کار عقب‌افتاده‌ای نداری!</p></div></div>
+      </div>
+    </div>
+
+    <!-- ───── HABITS ───── -->
+    <div class="page" id="page-habits">
+      <div class="card mb-16">
+        <div class="flex-row mb-12">
+          <div class="card-title" style="margin:0;flex:1">📋 تراکر عادت ماهانه</div>
+          <span class="text-sm text-m" id="habit-month"></span>
+        </div>
+        <div class="habit-grid" id="habit-grid"></div>
+      </div>
+      <div class="card">
+        <div class="card-title">🌡️ Heatmap عادت‌ها — ماه جاری</div>
+        <div id="habit-heatmap" style="overflow-x:auto"></div>
+      </div>
+    </div>
+
+    <!-- ───── STREAK ───── -->
+    <div class="page" id="page-streak">
+      <div class="streak-cards" id="streak-cards"></div>
+      <div class="card mt-16">
+        <div class="card-title">🏆 Hall of Fame — بزرگ‌ترین دستاوردها</div>
+        <div id="hall-of-fame"><div class="empty-state"><div class="empty-icon">🏆</div><p>اولین رکوردت رو ثبت کن!</p></div></div>
+      </div>
+    </div>
+
+    <!-- ───── MOOD ───── -->
+    <div class="page" id="page-mood">
+      <div class="mood-form">
+        <div class="mood-metric"><div class="mood-metric-label">😊 خلق (۱-۱۰)</div><input type="range" class="mood-slider" min="1" max="10" value="7" id="mood-mood" oninput="this.nextElementSibling.textContent=this.value"><div class="mood-val">7</div></div>
+        <div class="mood-metric"><div class="mood-metric-label">⚡ انرژی (۱-۱۰)</div><input type="range" class="mood-slider" min="1" max="10" value="7" id="mood-energy" oninput="this.nextElementSibling.textContent=this.value"><div class="mood-val">7</div></div>
+        <div class="mood-metric"><div class="mood-metric-label">🎯 تمرکز (۱-۱۰)</div><input type="range" class="mood-slider" min="1" max="10" value="7" id="mood-focus" oninput="this.nextElementSibling.textContent=this.value"><div class="mood-val">7</div></div>
+        <div class="mood-metric"><div class="mood-metric-label">💪 حال جسمی (۱-۱۰)</div><input type="range" class="mood-slider" min="1" max="10" value="7" id="mood-body" oninput="this.nextElementSibling.textContent=this.value"><div class="mood-val">7</div></div>
+        <div class="mood-metric"><div class="mood-metric-label">😴 ساعت خواب</div><input type="range" class="mood-slider" min="0" max="12" step=".5" value="7" id="mood-sleep" oninput="this.nextElementSibling.textContent=this.value+' ساعت'"><div class="mood-val">7 ساعت</div></div>
+        <div class="mood-metric"><div class="mood-metric-label">📝 یادداشت</div><textarea class="journal-textarea" id="mood-note" style="min-height:60px" placeholder="چطوری امروز؟"></textarea></div>
+      </div>
+      <div class="chart-area">
+        <div class="card-title">📈 روند ۳۰ روز اخیر</div>
+        <div style="display:flex;gap:12px;margin-bottom:8px">
+          <span style="font-size:11px"><span style="color:var(--rose)">■</span> خلق</span>
+          <span style="font-size:11px"><span style="color:var(--em)">■</span> انرژی</span>
+        </div>
+        <div class="mini-chart" id="mood-chart"></div>
+      </div>
+    </div>
+
+    <!-- ───── GOAL 100 ───── -->
+    <div class="page" id="page-goal100">
+      <div class="goal-hero">
+        <div class="goal-title" id="g100-title">هدف ۱۰۰ روزه</div>
+        <div class="goal-days" id="g100-days">روز شروع را تنظیم کن</div>
+        <div class="progress-bar"><div class="progress-fill" id="g100-bar" style="width:0%"></div></div>
+        <div class="progress-labels"><span id="g100-pct">۰٪</span><span id="g100-remain">۱۰۰ روز باقی</span></div>
+        <div class="forecast">
+          <div class="forecast-chip" id="g100-velocity">⚡ Velocity: محاسبه...</div>
+          <div class="forecast-chip" id="g100-forecast">🔮 Forecast: —</div>
+        </div>
+      </div>
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="card-title">📋 تنظیم هدف</div>
+          <div class="field"><label>عنوان هدف</label><input type="text" id="g100-title-input" class="settings-input" style="width:100%" placeholder="هدفم رو بنویس..."></div>
+          <div class="field mt-8"><label>تاریخ شروع</label><input type="date" id="g100-start" class="settings-input" style="width:100%"></div>
+          <div class="field mt-8"><label>دسته</label><select id="g100-cat" class="settings-input" style="width:100%"><option value="">انتخاب کن...</option></select></div>
+          <div class="field mt-8"><label>پاداش در صورت موفقیت</label><input type="text" id="g100-reward" class="settings-input" style="width:100%" placeholder="جایزه‌ام چیه؟"></div>
+          <button class="btn-save-settings mt-12" onclick="saveGoal100()">ذخیره هدف</button>
+        </div>
+        <div class="card">
+          <div class="card-title">📅 چک‌این روز <span id="today-day-num"></span></div>
+          <div class="field"><label>✅ کارهای انجام شده</label><input type="number" id="ci-tasks" class="settings-input" style="width:100%" min="0" value="0"></div>
+          <div class="field mt-8"><label>💪 عادت‌ها</label><input type="number" id="ci-habits" class="settings-input" style="width:100%" min="0" value="0"></div>
+          <div class="field mt-8"><label>😊 انرژی (۱-۱۰)</label><input type="range" class="mood-slider" min="1" max="10" value="7" id="ci-energy" oninput="document.getElementById('ci-energy-val').textContent=this.value"><div class="mood-val" id="ci-energy-val">7</div></div>
+          <div class="field mt-8"><label>📊 % پیشرفت امروز</label><input type="number" id="ci-pct" class="settings-input" style="width:100%" min="0" max="100" value="0"></div>
+          <div class="field mt-8"><label>📝 یادداشت</label><textarea class="journal-textarea" id="ci-note" style="min-height:60px" placeholder="امروز چی شد؟"></textarea></div>
+          <button class="btn-save-settings mt-12" onclick="saveCheckin()">ثبت چک‌این</button>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── JOURNAL ───── -->
+    <div class="page" id="page-journal">
+      <div id="journal-lock-banner" style="display:none" class="lock-banner">🔒 این روز قفل شده</div>
+      <div class="grid grid-2 mb-16">
+        <div class="card">
+          <div class="card-title">😊 خلق امروز</div>
+          <div class="mood-picker" id="mood-picker">
+            <button class="mood-btn" onclick="selectMood(this,'😄 عالی')">😄 عالی</button>
+            <button class="mood-btn" onclick="selectMood(this,'😊 خوب')">😊 خوب</button>
+            <button class="mood-btn" onclick="selectMood(this,'😐 معمولی')">😐 معمولی</button>
+            <button class="mood-btn" onclick="selectMood(this,'😔 بد')">😔 بد</button>
+            <button class="mood-btn" onclick="selectMood(this,'😤 خسته')">😤 خسته</button>
+            <button class="mood-btn" onclick="selectMood(this,'🤩 هیجان‌زده')">🤩 هیجان‌زده</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">⭐ امتیاز روز</div>
+          <input type="range" class="mood-slider" min="1" max="10" value="7" id="j-score" oninput="document.getElementById('j-score-val').textContent=this.value">
+          <div class="mood-val" id="j-score-val">7</div>
+        </div>
+      </div>
+      <div class="card mb-16">
+        <div class="card-title">✍️ روزنوشت آزاد — بدون قضاوت</div>
+        <textarea class="journal-textarea" id="j-text" placeholder="امروز چی گذشت؟ چه حسی داری؟ هر چیزی که توی ذهنته..."></textarea>
+      </div>
+      <div class="grid grid-2 mb-16">
+        <div class="card">
+          <div class="card-title">🏆 ۳ Win امروز</div>
+          <div class="win-inputs">
+            <div class="win-item"><div class="win-num">۱</div><input type="text" class="win-input" id="win1" placeholder="اولین موفقیت..."></div>
+            <div class="win-item"><div class="win-num">۲</div><input type="text" class="win-input" id="win2" placeholder="دومین موفقیت..."></div>
+            <div class="win-item"><div class="win-num">۳</div><input type="text" class="win-input" id="win3" placeholder="سومین موفقیت..."></div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="card-title">🙏 ۳ چیز که ممنونم</div>
+          <div class="win-inputs">
+            <div class="win-item"><div class="win-num" style="background:var(--em)">۱</div><input type="text" class="win-input" id="grat1" placeholder="ممنونم از..."></div>
+            <div class="win-item"><div class="win-num" style="background:var(--em)">۲</div><input type="text" class="win-input" id="grat2" placeholder="ممنونم از..."></div>
+            <div class="win-item"><div class="win-num" style="background:var(--em)">۳</div><input type="text" class="win-input" id="grat3" placeholder="ممنونم از..."></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- ───── IDEAS ───── -->
+    <div class="page" id="page-ideas">
+      <div class="idea-input-area">
+        <textarea class="idea-input" id="idea-text" placeholder="هر فکری — هر ایده‌ای — بدون فیلتر بنویس..."></textarea>
+        <div class="idea-meta">
+          <select id="idea-cat" class="settings-input"><option value="">دسته...</option><option>💼 کسب‌وکار</option><option>📚 یادگیری</option><option>💪 سلامت</option><option>🔬 پروژه فنی</option><option>💰 مالی</option><option>🎨 خلاقانه</option><option>📌 سایر</option></select>
+          <select id="idea-pot" class="settings-input"><option value="⭐⭐ متوسط">⭐⭐ متوسط</option><option value="💎 عالی">💎 عالی</option><option value="⭐⭐⭐ خوب">⭐⭐⭐ خوب</option><option value="⭐ ضعیف">⭐ ضعیف</option></select>
+          <button class="btn-add" onclick="addIdea()">💡 ثبت ایده</button>
+        </div>
+      </div>
+      <div class="idea-cards" id="idea-cards"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- ───── FINANCE ───── -->
+    <div class="page" id="page-finance">
+      <div class="finance-kpis">
+        <div class="fin-kpi"><div class="fin-kpi-label">💵 درآمد ماه</div><div class="fin-kpi-val income" id="fin-income">—</div></div>
+        <div class="fin-kpi"><div class="fin-kpi-label">💸 هزینه ماه</div><div class="fin-kpi-val expense" id="fin-expense">—</div></div>
+        <div class="fin-kpi"><div class="fin-kpi-label">💾 پس‌انداز</div><div class="fin-kpi-val balance" id="fin-balance">—</div></div>
+      </div>
+      <div class="add-transaction">
+        <input type="text" id="trans-desc" placeholder="شرح تراکنش...">
+        <select id="trans-type"><option value="هزینه">💸 هزینه</option><option value="درآمد">💵 درآمد</option><option value="پس‌انداز">💾 پس‌انداز</option></select>
+        <select id="trans-cat"><option value="">دسته...</option><option>🍕 خوراک</option><option>🚗 حمل‌ونقل</option><option>🏠 مسکن</option><option>💊 سلامت</option><option>📚 آموزش</option><option>👕 پوشاک</option><option>🎮 سرگرمی</option><option>📱 قبوض</option><option>💪 باشگاه</option><option>📌 سایر</option></select>
+        <input type="number" id="trans-amount" placeholder="مبلغ (تومان)" style="max-width:160px">
+        <select id="trans-method"><option value="💵 نقد">💵 نقد</option><option value="💳 کارت">💳 کارت</option><option value="📱 آنلاین">📱 آنلاین</option></select>
+        <button class="btn-add" onclick="addTransaction()">+ ثبت</button>
+      </div>
+      <div class="trans-list" id="trans-list"><div class="loading"><div class="spinner"></div></div></div>
+    </div>
+
+    <!-- ───── SETTINGS ───── -->
+    <div class="page" id="page-settings">
+      <div class="grid grid-2">
+        <div class="card">
+          <div class="settings-section">
+            <h3>⚙️ تنظیمات عمومی</h3>
+            <div class="settings-row"><span class="settings-label">ساعت کاری روزانه</span><input type="number" id="set-workhours" class="settings-input" value="8" min="1" max="16"></div>
+            <div class="settings-row"><span class="settings-label">تعداد Top Tasks</span><input type="number" id="set-toptasks" class="settings-input" value="3" min="1" max="5"></div>
+            <div class="settings-row"><span class="settings-label">واحد پول</span><input type="text" id="set-currency" class="settings-input" value="تومان"></div>
+          </div>
+          <div class="settings-section">
+            <h3>🎨 تم رنگی</h3>
+            <div class="color-picker-row">
+              <div class="color-swatch selected" style="background:#00C896" onclick="setAccent('#00C896',this)"></div>
+              <div class="color-swatch" style="background:#38B6FF" onclick="setAccent('#38B6FF',this)"></div>
+              <div class="color-swatch" style="background:#FFB627" onclick="setAccent('#FFB627',this)"></div>
+              <div class="color-swatch" style="background:#FF4D6D" onclick="setAccent('#FF4D6D',this)"></div>
+              <div class="color-swatch" style="background:#7B5EA7" onclick="setAccent('#7B5EA7',this)"></div>
+              <div class="color-swatch" style="background:#4DD0E1" onclick="setAccent('#4DD0E1',this)"></div>
+            </div>
+          </div>
+        </div>
+        <div class="card">
+          <div class="settings-section">
+            <h3>💪 عادت‌های روزانه</h3>
+            <div class="habit-list-editor" id="habit-editor"></div>
+            <button class="btn-outline mt-8" onclick="addHabitField()">+ افزودن عادت</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="settings-section">
+            <h3>📌 دسته‌بندی‌ها</h3>
+            <div id="cat-editor"></div>
+            <button class="btn-outline mt-8" onclick="addCatField()">+ افزودن دسته</button>
+          </div>
+        </div>
+        <div class="card">
+          <div class="settings-section">
+            <h3>🎯 هدف ۱۰۰ روزه اصلی</h3>
+            <input type="text" id="set-goal" class="settings-input" style="width:100%" placeholder="هدفم رو بنویس...">
+          </div>
+          <div class="settings-section">
+            <h3>ℹ️ اطلاعات حساب</h3>
+            <div class="settings-row"><span class="settings-label">نام کاربری</span><span class="text-em" id="set-username-display"></span></div>
+          </div>
+          <button class="btn-save-settings" onclick="saveAllSettings()">💾 ذخیره همه تنظیمات</button>
+        </div>
+      </div>
+    </div>
+
+  </div><!-- /main -->
+</div><!-- /app -->
+
+<div id="toast"></div>
+
+<script>
+// ═══════════════════════════════════════════════════════════
+//  CONFIG — اینجا API URL رو بعد از deploy بذار
+// ═══════════════════════════════════════════════════════════
+const API = 'https://script.google.com/macros/s/AKfycbwjhjmtQe1USl_IxACXJTbcGLFkRrCshV13_tORcnE7xwMlw7trw6QiSF9YCrEsjdUp/exec' ;
+// ═══════════════════════════════════════════════════════════
+//  STATE
+// ═══════════════════════════════════════════════════════════
+let STATE = {
+  user: null,
+  settings: {},
+  today: new Date().toISOString().slice(0,10),
+  tasks: [],
+  habits: {},
+  focusTasks: [],
+  finance: [],
+  moods: [],
+  ideas: [],
+  streaks: [],
+  goals: {},
+  selectedMood: '',
+  currentPage: 'dashboard',
+};
+
+// ═══════════════════════════════════════════════════════════
+//  API HELPERS
+// ═══════════════════════════════════════════════════════════
+async function apiGet(params) {
+  const url = API + '?' + new URLSearchParams(params);
+  const r = await fetch(url);
+  return r.json();
+}
+async function apiPost(body) {
+  const r = await fetch(API, {
+    method:'POST',
+    headers:{'Content-Type':'application/json'},
+    body: JSON.stringify(body)
+  });
+  return r.json();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  AUTH
+// ═══════════════════════════════════════════════════════════
+function switchTab(tab) {
+  document.querySelectorAll('.auth-tab').forEach((t,i)=>t.classList.toggle('active',(tab==='login'?i===0:i===1)));
+  document.getElementById('login-form').style.display = tab==='login'?'':'none';
+  document.getElementById('register-form').style.display = tab==='register'?'':'none';
+  document.getElementById('auth-msg').style.display='none';
+}
+
+function showMsg(msg, type='err') {
+  const el = document.getElementById('auth-msg');
+  el.textContent = msg; el.className = 'auth-msg '+type; el.style.display='block';
+}
+
+async function doLogin() {
+  const username = document.getElementById('login-user').value.trim();
+  const password = document.getElementById('login-pass').value;
+  if (!username||!password) return showMsg('اطلاعات را کامل وارد کنید');
+  try {
+    const res = await apiGet({action:'login', username, password});
+    if (!res.ok) return showMsg(res.error);
+    STATE.user = username;
+    STATE.settings = res.data.settings || {};
+    localStorage.setItem('lifeOS_user', username);
+    enterApp();
+  } catch(e) { showMsg('خطا در اتصال به سرور'); }
+}
+
+async function doRegister() {
+  const username = document.getElementById('reg-user').value.trim();
+  const password = document.getElementById('reg-pass').value;
+  const password2 = document.getElementById('reg-pass2').value;
+  if (!username||!password) return showMsg('اطلاعات را کامل وارد کنید');
+  if (password !== password2) return showMsg('رمزهای عبور یکسان نیستند');
+  try {
+    const res = await apiPost({action:'register', username, password});
+    if (!res.ok) return showMsg(res.error);
+    showMsg('ثبت‌نام موفق! وارد شوید', 'ok');
+    setTimeout(()=>switchTab('login'), 1500);
+  } catch(e) { showMsg('خطا در اتصال به سرور'); }
+}
+
+function doLogout() {
+  STATE.user = null;
+  localStorage.removeItem('lifeOS_user');
+  document.getElementById('app').classList.remove('visible');
+  document.getElementById('auth-screen').style.display='flex';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  APP INIT
+// ═══════════════════════════════════════════════════════════
+function enterApp() {
+  document.getElementById('auth-screen').style.display='none';
+  document.getElementById('app').classList.add('visible');
+  applySettings();
+  initUI();
+  loadDashboard();
+}
+
+function initUI() {
+  const u = STATE.user;
+  document.getElementById('user-avatar').textContent = u.charAt(0).toUpperCase();
+  document.getElementById('user-name-display').textContent = u;
+  document.getElementById('dash-username').textContent = u;
+  document.getElementById('set-username-display').textContent = u;
+
+  const now = new Date();
+  const dateStr = now.toLocaleDateString('fa-IR',{weekday:'long',year:'numeric',month:'long',day:'numeric'});
+  document.getElementById('dash-date').textContent = dateStr;
+  document.getElementById('topbar-date').textContent = dateStr;
+
+  if (window.innerWidth < 768) {
+    document.getElementById('menu-btn').style.display='flex';
+  }
+
+  // Populate selects with cats
+  const cats = getCategories();
+  ['focus-cat','g100-cat','trans-cat'].forEach(id => {
+    const el = document.getElementById(id);
+    if (!el) return;
+    cats.forEach(c => { const o=document.createElement('option'); o.value=c; o.textContent=c; el.appendChild(o); });
+  });
+
+  // today day number for goal
+  document.getElementById('today-day-num').textContent = STATE.today;
+
+  renderHabitMonth();
+  renderSettings();
+}
+
+function applySettings() {
+  const s = STATE.settings;
+  if (s.theme === 'light') document.documentElement.setAttribute('data-theme','light');
+  if (s.accent) document.documentElement.style.setProperty('--em', s.accent);
+}
+
+function getCategories() {
+  try {
+    const c = STATE.settings.categories;
+    return c ? JSON.parse(c) : ["💪 باشگاه","📚 درس","💼 کار","🏠 خانه","💰 مالی","🧘 سلامت","👥 اجتماعی","🎯 شخصی"];
+  } catch(e) { return ["💪 باشگاه","📚 درس","💼 کار","🎯 شخصی"]; }
+}
+
+function getHabitList() {
+  try {
+    const h = STATE.settings.habits;
+    return h ? JSON.parse(h) : ["💪 ورزش","📚 مطالعه","💧 آب کافی","😴 خواب"];
+  } catch(e) { return ["💪 ورزش","📚 مطالعه","💧 آب کافی","😴 خواب"]; }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  NAVIGATION
+// ═══════════════════════════════════════════════════════════
+const PAGE_TITLES = {
+  dashboard:'داشبورد', daily:'پلنر روزانه', focus:'Focus Mode',
+  habits:'تراکر عادت', streak:'Streak', mood:'خلق و انرژی',
+  goal100:'هدف ۱۰۰ روزه', journal:'Journal', ideas:'Idea Bank',
+  finance:'مدیریت مالی', settings:'تنظیمات'
+};
+
+function showPage(page) {
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.nav-item').forEach(n=>n.classList.remove('active'));
+  document.getElementById('page-'+page).classList.add('active');
+  document.querySelectorAll('.nav-item').forEach(n=>{
+    if (n.getAttribute('onclick')===`showPage('${page}')`) n.classList.add('active');
+  });
+  document.getElementById('topbar-title').textContent = PAGE_TITLES[page]||page;
+  STATE.currentPage = page;
+  document.getElementById('sidebar').classList.remove('open');
+
+  // Lazy load
+  switch(page) {
+    case 'dashboard': loadDashboard(); break;
+    case 'daily': loadDaily(); break;
+    case 'habits': loadHabits(); break;
+    case 'streak': loadStreak(); break;
+    case 'mood': loadMood(); break;
+    case 'goal100': loadGoal100(); break;
+    case 'journal': loadJournal(); break;
+    case 'ideas': loadIdeas(); break;
+    case 'finance': loadFinance(); break;
+    case 'focus': loadFocus(); break;
+  }
+}
+
+function toggleSidebar() {
+  document.getElementById('sidebar').classList.toggle('open');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DASHBOARD
+// ═══════════════════════════════════════════════════════════
+async function loadDashboard() {
+  try {
+    const res = await apiGet({action:'getData', section:'dashboard', username:STATE.user});
+    if (!res.ok) return;
+    const d = res.data;
+
+    // KPIs
+    document.getElementById('kpi-tasks').textContent = d.tasksTotal||0;
+    document.getElementById('kpi-done').textContent = d.tasksDone||0;
+    document.getElementById('kpi-balance').textContent = fmt(d.finance?.balance||0);
+
+    // Streak
+    const maxStreak = (d.streaks||[]).reduce((m,s)=>Math.max(m,s.currentStreak||0),0);
+    document.getElementById('kpi-streak').textContent = maxStreak + '🔥';
+
+    // Capacity
+    const workH = Number(STATE.settings.workH||8);
+    const plannedH = (d.daily?.taskJson||[]).reduce((s,t)=>s+Number(t.duration||0),0)/60;
+    const pct = Math.min(Math.round(plannedH/workH*100),999);
+    document.getElementById('cap-label').textContent = `${plannedH.toFixed(1)} / ${workH} ساعت`;
+    document.getElementById('cap-bar').style.width = Math.min(pct,100)+'%';
+    document.getElementById('cap-bar').classList.toggle('over', pct>100);
+    document.getElementById('cap-warn').textContent = pct>100 ? '⚠️ اضافه‌بار!' : '';
+
+    // Top3
+    const top3El = document.getElementById('dash-top3');
+    const tops = d.daily?.topTasks||[];
+    top3El.innerHTML = tops.length
+      ? tops.map((t,i)=>`<div class="flex-row mb-8"><span>${['🥇','🥈','🥉'][i]}</span><span class="text-sm flex-1">${t.text||'—'}</span><span class="badge ${t.done?'badge-green':'badge-blue'}">${t.done?'✅':'⏳'}</span></div>`).join('')
+      : '<div class="empty-state" style="padding:16px"><p>Top 3 رو در پلنر روزانه تنظیم کن</p></div>';
+
+    // Habits dash
+    const habEl = document.getElementById('dash-habits');
+    const habits = getHabitList();
+    habEl.innerHTML = habits.slice(0,5).map(h=>{
+      const done = d.habits?.[h] === '✅';
+      return `<div class="flex-row mb-8"><span class="text-sm flex-1">${h}</span><span class="badge ${done?'badge-green':'badge-blue'}">${done?'✅':'—'}</span></div>`;
+    }).join('');
+
+  } catch(e) { console.error(e); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  DAILY
+// ═══════════════════════════════════════════════════════════
+async function loadDaily() {
+  const isLocked = new Date(STATE.today) < new Date(new Date().toISOString().slice(0,10));
+  document.getElementById('daily-lock-banner').style.display = isLocked ? 'flex':'none';
+
+  try {
+    const res = await apiGet({action:'getData',section:'daily',username:STATE.user,date:STATE.today});
+    if (res.ok && res.data) {
+      const d = res.data;
+      STATE.tasks = d.taskJson||[];
+      const tops = d.topTasks||[];
+      ['top1','top2','top3'].forEach((id,i)=>{
+        const el = document.getElementById(id);
+        if(el && tops[i]) { el.value=tops[i].text||''; if(tops[i].done) el.parentElement.querySelector('.status-chip').classList.add('done'); }
+      });
+      const sd = d.shutdown||{};
+      ['unfinished','best','tomorrow'].forEach(k=>{ const el=document.getElementById('sd-'+k); if(el) el.value=sd[k]||''; });
+      if(sd.score) { document.getElementById('sd-score').value=sd.score; document.getElementById('sd-score-val').textContent=sd.score; }
+    }
+    renderTaskTable(isLocked);
+  } catch(e) { renderTaskTable(false); }
+}
+
+function renderTaskTable(locked) {
+  const tbody = document.getElementById('task-tbody');
+  const cats = getCategories();
+  tbody.innerHTML = '';
+  if (!STATE.tasks.length) addTaskRow();
+  STATE.tasks.forEach((t,i) => {
+    const tr = document.createElement('tr');
+    tr.className = 'task-row' + (t.status==='✅ شد'?' done-row':'');
+    tr.innerHTML = `
+      <td><input class="task-cell-input" style="width:70px" value="${t.time||''}" placeholder="08:00" ${locked?'disabled':''}></td>
+      <td><input class="task-cell-input" value="${escHtml(t.title||'')}" placeholder="کار..." ${locked?'disabled':''}></td>
+      <td><select class="cell-select" ${locked?'disabled':''}>${cats.map(c=>`<option ${c===t.category?'selected':''}>${c}</option>`).join('')}</select></td>
+      <td><select class="cell-select" ${locked?'disabled':''}>
+        ${['🔴 فوری','🟠 بالا','🟡 متوسط','🟢 پایین'].map(p=>`<option ${p===t.priority?'selected':''}>${p}</option>`).join('')}
+      </select></td>
+      <td><input class="task-cell-input" type="number" style="width:60px" value="${t.duration||''}" placeholder="30" ${locked?'disabled':''}></td>
+      <td><select class="cell-select" onchange="updateTaskStatus(${i},this.value)" ${locked?'disabled':''}>
+        ${['✅ شد','⏳ در حال','❌ نشد','⏭️ بعداً'].map(s=>`<option ${s===t.status?'selected':''}>${s}</option>`).join('')}
+      </select></td>
+      <td>${locked?'🔒':`<span style="cursor:pointer;color:var(--rose)" onclick="removeTask(${i})">✕</span>`}</td>`;
+    // sync inputs
+    const inputs = tr.querySelectorAll('input,select');
+    inputs[0].addEventListener('change',e=>{ STATE.tasks[i].time=e.target.value; });
+    inputs[1].addEventListener('input',e=>{ STATE.tasks[i].title=e.target.value; });
+    inputs[2].addEventListener('change',e=>{ STATE.tasks[i].category=e.target.value; });
+    inputs[3].addEventListener('change',e=>{ STATE.tasks[i].priority=e.target.value; });
+    inputs[4].addEventListener('change',e=>{ STATE.tasks[i].duration=Number(e.target.value); });
+    tbody.appendChild(tr);
+  });
+}
+
+function addTaskRow() {
+  STATE.tasks.push({time:'',title:'',category:'',priority:'🟡 متوسط',duration:30,status:'⏳ در حال'});
+  renderTaskTable(false);
+}
+function removeTask(i) { STATE.tasks.splice(i,1); renderTaskTable(false); }
+function updateTaskStatus(i,v) { STATE.tasks[i].status=v; renderTaskTable(false); }
+
+function toggleTop(n) {
+  const chip = document.querySelectorAll('.status-chip')[n-1];
+  chip.classList.toggle('done');
+}
+
+async function saveDaily() {
+  const tops = [1,2,3].map(n=>({
+    text: document.getElementById('top'+n)?.value||'',
+    done: document.querySelectorAll('.status-chip')[n-1]?.classList.contains('done')
+  }));
+  const shutdown = {
+    unfinished: document.getElementById('sd-unfinished')?.value||'',
+    best: document.getElementById('sd-best')?.value||'',
+    tomorrow: document.getElementById('sd-tomorrow')?.value||'',
+    score: document.getElementById('sd-score')?.value||7,
+  };
+  const workH = Number(STATE.settings.workH||8);
+  const plannedH = STATE.tasks.reduce((s,t)=>s+Number(t.duration||0),0)/60;
+  const res = await apiPost({action:'saveData',section:'daily',username:STATE.user,date:STATE.today,payload:{tasks:STATE.tasks,topTasks:tops,shutdown,capacity:plannedH.toFixed(1)+'/'+workH}});
+  toast(res.ok?'ذخیره شد ✅':'خطا در ذخیره','','','success');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  HABITS
+// ═══════════════════════════════════════════════════════════
+async function loadHabits() {
+  const res = await apiGet({action:'getData',section:'habits',username:STATE.user,date:STATE.today});
+  STATE.habits = (res.ok && res.data) ? res.data : {};
+  renderHabitGrid();
+  renderHeatmap();
+}
+
+function renderHabitGrid() {
+  const habits = getHabitList();
+  const el = document.getElementById('habit-grid');
+  el.innerHTML = habits.map(h => {
+    const val = STATE.habits[h]||'';
+    return `<div class="habit-row">
+      <div class="habit-name">${h}</div>
+      <div class="habit-dot ${val==='✅'?'done':val==='❌'?'fail':val==='⏭️'?'skip':''}" onclick="cycleHabit('${h}',this)">
+        ${val||'○'}
+      </div>
+      <div class="habit-streak">
+        <div class="streak-num" id="s-${h.replace(/\s/g,'-')}">0</div>
+        <div class="streak-label">روز</div>
+      </div>
+      <div class="habit-bar">
+        <div class="h-bar-bg"><div class="h-bar-fill" style="width:0%"></div></div>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+function cycleHabit(name, el) {
+  const vals = ['','✅','❌','⏭️'];
+  const cur = STATE.habits[name]||'';
+  const next = vals[(vals.indexOf(cur)+1)%vals.length];
+  STATE.habits[name] = next;
+  el.className = 'habit-dot' + (next==='✅'?' done':next==='❌'?' fail':next==='⏭️'?' skip':'');
+  el.textContent = next||'○';
+}
+
+function renderHabitMonth() {
+  const now = new Date();
+  document.getElementById('habit-month')&&(document.getElementById('habit-month').textContent = now.toLocaleDateString('fa-IR',{month:'long',year:'numeric'}));
+}
+
+function renderHeatmap() {
+  const habits = getHabitList();
+  const el = document.getElementById('habit-heatmap');
+  const days = Array.from({length:31},(_,i)=>i+1);
+  el.innerHTML = `<table style="border-collapse:collapse;font-size:11px">
+    <thead><tr><th style="padding:4px 8px;text-align:right">عادت</th>${days.map(d=>`<th style="padding:4px 3px;text-align:center;color:var(--text-m)">${d}</th>`).join('')}</tr></thead>
+    <tbody>${habits.map(h=>`<tr>
+      <td style="padding:4px 8px;white-space:nowrap">${h}</td>
+      ${days.map(d=>`<td style="padding:2px 3px;text-align:center">
+        <div style="width:20px;height:20px;border-radius:4px;margin:auto;background:var(--border);display:flex;align-items:center;justify-content:center;font-size:9px;cursor:pointer" onclick="heatmapClick(this,'${h}',${d})">·</div>
+      </td>`).join('')}
+    </tr>`).join('')}</tbody>
+  </table>`;
+}
+
+function heatmapClick(el, habit, day) {
+  const vals = ['·','✓','✗','→'];
+  const clrs = ['var(--border)','#B9F6CA','#FFCDD2','#FFF9C4'];
+  const i = vals.indexOf(el.textContent.trim());
+  const next = (i+1)%vals.length;
+  el.textContent = vals[next]; el.style.background = clrs[next];
+}
+
+async function saveHabits() {
+  const res = await apiPost({action:'saveData',section:'habits',username:STATE.user,date:STATE.today,payload:STATE.habits});
+  toast(res.ok?'عادت‌ها ذخیره شد ✅':'خطا','','','success');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  STREAK
+// ═══════════════════════════════════════════════════════════
+async function loadStreak() {
+  const res = await apiGet({action:'getData',section:'streak',username:STATE.user});
+  STATE.streaks = res.ok ? (res.data||[]) : [];
+  renderStreakCards();
+}
+
+function renderStreakCards() {
+  const habits = getHabitList();
+  const el = document.getElementById('streak-cards');
+  el.innerHTML = habits.map(h => {
+    const s = STATE.streaks.find(x=>x.habit===h)||{currentStreak:0,bestStreak:0,total:0};
+    const pct = s.bestStreak>0 ? Math.round(s.currentStreak/s.bestStreak*100):0;
+    return `<div class="streak-card">
+      <div class="streak-name">${h}</div>
+      <div class="streak-big">${s.currentStreak||0}🔥</div>
+      <div class="streak-sub">بهترین: ${s.bestStreak||0} روز</div>
+      <div class="streak-bar-bg"><div class="streak-bar-fill" style="width:${pct}%"></div></div>
+      <div style="display:flex;gap:8px;margin-top:8px">
+        <button class="btn-outline" onclick="updateStreak('${h}',1)">+ یه روز</button>
+        <button class="btn-outline" onclick="updateStreak('${h}',-1)" style="color:var(--rose)">✕ شکست</button>
+      </div>
+    </div>`;
+  }).join('');
+}
+
+async function updateStreak(habit, delta) {
+  const s = STATE.streaks.find(x=>x.habit===habit)||{habit,currentStreak:0,bestStreak:0,total:0,startDate:STATE.today};
+  if (delta===1) { s.currentStreak++; s.total++; s.bestStreak=Math.max(s.bestStreak,s.currentStreak); }
+  else { s.currentStreak=0; }
+  await apiPost({action:'saveData',section:'streak',username:STATE.user,payload:s});
+  if (!STATE.streaks.find(x=>x.habit===habit)) STATE.streaks.push(s);
+  renderStreakCards();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  MOOD
+// ═══════════════════════════════════════════════════════════
+async function loadMood() {
+  const res = await apiGet({action:'getData',section:'mood',username:STATE.user,
+    startDate:new Date(Date.now()-30*86400000).toISOString().slice(0,10),endDate:STATE.today});
+  STATE.moods = res.ok ? (res.data||[]) : [];
+  renderMoodChart();
+}
+
+function renderMoodChart() {
+  const el = document.getElementById('mood-chart');
+  const last30 = STATE.moods.slice(-30);
+  if (!last30.length) { el.innerHTML='<div class="empty-state" style="flex:1"><p>داده‌ای ثبت نشده</p></div>'; return; }
+  el.innerHTML = last30.map(m=>`
+    <div style="flex:1;display:flex;flex-direction:column;gap:2px;align-items:center">
+      <div class="chart-bar mood-bar" style="height:${(m.mood||5)/10*76}px"></div>
+      <div class="chart-bar energy-bar" style="height:${(m.energy||5)/10*76}px;margin-top:-76px;opacity:.5"></div>
+    </div>`).join('');
+}
+
+async function saveMood() {
+  const payload = {
+    mood:document.getElementById('mood-mood').value,
+    energy:document.getElementById('mood-energy').value,
+    focus:document.getElementById('mood-focus').value,
+    body:document.getElementById('mood-body').value,
+    sleep:document.getElementById('mood-sleep').value,
+    note:document.getElementById('mood-note').value,
+  };
+  const res = await apiPost({action:'saveData',section:'mood',username:STATE.user,date:STATE.today,payload});
+  toast(res.ok?'ثبت شد ✅':'خطا','','','success');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  GOAL 100
+// ═══════════════════════════════════════════════════════════
+async function loadGoal100() {
+  const res = await apiGet({action:'getData',section:'goals',username:STATE.user});
+  const goals = res.ok ? (res.data||[]) : [];
+  const g = goals[0];
+  if (!g) return;
+  STATE.goals = g;
+  document.getElementById('g100-title-input').value = g.title||'';
+  document.getElementById('g100-start').value = g.startDate||'';
+  document.getElementById('g100-reward').value = g.reward||'';
+  updateGoalDisplay(g);
+}
+
+function updateGoalDisplay(g) {
+  if (!g||!g.startDate) return;
+  const start = new Date(g.startDate);
+  const today = new Date();
+  const daysPassed = Math.max(0,Math.min(Math.floor((today-start)/86400000),100));
+  const pct = Math.round(daysPassed/100*100);
+  document.getElementById('g100-title').textContent = g.title||'هدف ۱۰۰ روزه';
+  document.getElementById('g100-days').textContent = `روز ${daysPassed} از ۱۰۰`;
+  document.getElementById('g100-bar').style.width = pct+'%';
+  document.getElementById('g100-pct').textContent = pct+'٪';
+  document.getElementById('g100-remain').textContent = (100-daysPassed)+' روز باقی';
+  document.getElementById('today-day-num').textContent = daysPassed;
+
+  // Mock velocity & forecast
+  const checkins = g.checkinJson||[];
+  if (checkins.length>2) {
+    const avgPct = checkins.slice(-7).reduce((s,c)=>s+Number(c.pct||0),0)/checkins.slice(-7).length;
+    document.getElementById('g100-velocity').textContent = `⚡ Velocity: ${avgPct.toFixed(0)}٪/روز`;
+    const remaining = 100-daysPassed;
+    const forecast = avgPct>0 ? Math.ceil(remaining/avgPct) : '?';
+    document.getElementById('g100-forecast').textContent = `🔮 Forecast: ~${forecast} روز دیگه`;
+  }
+}
+
+async function saveGoal100() {
+  const payload = {
+    goalId:'main',
+    title:document.getElementById('g100-title-input').value,
+    startDate:document.getElementById('g100-start').value,
+    category:document.getElementById('g100-cat').value,
+    reward:document.getElementById('g100-reward').value,
+    endDate:'',
+    checkins:STATE.goals.checkinJson||[],
+  };
+  const res = await apiPost({action:'saveData',section:'goals',username:STATE.user,payload});
+  toast(res.ok?'هدف ذخیره شد ✅':'خطا','','','success');
+  if(res.ok) { STATE.goals={...STATE.goals,...payload}; updateGoalDisplay(STATE.goals); }
+}
+
+async function saveCheckin() {
+  const checkin = {
+    date:STATE.today,
+    tasks:document.getElementById('ci-tasks').value,
+    habits:document.getElementById('ci-habits').value,
+    energy:document.getElementById('ci-energy').value,
+    pct:document.getElementById('ci-pct').value,
+    note:document.getElementById('ci-note').value,
+  };
+  const checkins = [...(STATE.goals.checkinJson||[]).filter(c=>c.date!==STATE.today), checkin];
+  const payload = {...STATE.goals, goalId:'main', checkins};
+  const res = await apiPost({action:'saveData',section:'goals',username:STATE.user,payload});
+  toast(res.ok?'چک‌این ثبت شد ✅':'خطا','','','success');
+  if(res.ok) { STATE.goals.checkinJson=checkins; updateGoalDisplay(STATE.goals); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  JOURNAL
+// ═══════════════════════════════════════════════════════════
+async function loadJournal() {
+  const isLocked = STATE.today < new Date().toISOString().slice(0,10);
+  document.getElementById('journal-lock-banner').style.display = isLocked?'flex':'none';
+  const res = await apiGet({action:'getData',section:'journal',username:STATE.user,startDate:STATE.today,endDate:STATE.today});
+  if (res.ok && res.data && res.data.length) {
+    const j = res.data[0];
+    document.getElementById('j-text').value = j.freeText||'';
+    document.getElementById('j-score').value = j.score||7;
+    document.getElementById('j-score-val').textContent = j.score||7;
+    const wins = j.wins||[];
+    ['win1','win2','win3'].forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.value=wins[i]||''; });
+    const grats = j.gratitude||[];
+    ['grat1','grat2','grat3'].forEach((id,i)=>{ const el=document.getElementById(id); if(el) el.value=grats[i]||''; });
+    if(j.mood) {
+      document.querySelectorAll('.mood-btn').forEach(b=>b.classList.toggle('selected',b.textContent.trim()===j.mood));
+      STATE.selectedMood=j.mood;
+    }
+    if(isLocked) document.querySelectorAll('#page-journal input,#page-journal textarea').forEach(el=>el.disabled=true);
+  }
+}
+
+function selectMood(btn, mood) {
+  document.querySelectorAll('.mood-btn').forEach(b=>b.classList.remove('selected'));
+  btn.classList.add('selected');
+  STATE.selectedMood = mood;
+}
+
+async function saveJournal() {
+  const payload = {
+    mood:STATE.selectedMood,
+    energy:document.getElementById('mood-mood')?.value||7,
+    freeText:document.getElementById('j-text').value,
+    score:document.getElementById('j-score').value,
+    wins:[document.getElementById('win1').value,document.getElementById('win2').value,document.getElementById('win3').value],
+    gratitude:[document.getElementById('grat1').value,document.getElementById('grat2').value,document.getElementById('grat3').value],
+  };
+  const res = await apiPost({action:'saveData',section:'journal',username:STATE.user,date:STATE.today,payload});
+  toast(res.ok?'Journal ذخیره شد ✅':'خطا','','','success');
+}
+
+// ═══════════════════════════════════════════════════════════
+//  IDEAS
+// ═══════════════════════════════════════════════════════════
+async function loadIdeas() {
+  const res = await apiGet({action:'getData',section:'ideas',username:STATE.user});
+  STATE.ideas = res.ok ? (res.data||[]) : [];
+  renderIdeas();
+}
+
+function renderIdeas() {
+  const el = document.getElementById('idea-cards');
+  if (!STATE.ideas.length) { el.innerHTML='<div class="empty-state" style="grid-column:span 2"><div class="empty-icon">💡</div><p>اولین ایده‌ات رو ثبت کن!</p></div>'; return; }
+  el.innerHTML = [...STATE.ideas].reverse().map(idea=>`
+    <div class="idea-card">
+      <div class="idea-card-text">${escHtml(idea.idea||'')}</div>
+      <div class="idea-card-meta">
+        <span class="badge badge-blue">${idea.category||'—'}</span>
+        <span class="badge badge-amber">${idea.potential||'—'}</span>
+        <span class="badge ${idea.status==='✅ اجرا'?'badge-green':'badge-blue'}">${idea.status||'💡 ایده'}</span>
+        <span class="text-xs" style="color:var(--text-m);margin-right:auto">${idea.date||''}</span>
+      </div>
+    </div>`).join('');
+}
+
+async function addIdea() {
+  const text = document.getElementById('idea-text').value.trim();
+  if (!text) return;
+  const payload = {idea:text,category:document.getElementById('idea-cat').value,potential:document.getElementById('idea-pot').value,status:'💡 ایده'};
+  const res = await apiPost({action:'saveData',section:'ideas',username:STATE.user,payload});
+  if(res.ok) { toast('ایده ثبت شد ✅','','','success'); document.getElementById('idea-text').value=''; loadIdeas(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FINANCE
+// ═══════════════════════════════════════════════════════════
+async function loadFinance() {
+  const monthStart = STATE.today.slice(0,7)+'-01';
+  const res = await apiGet({action:'getData',section:'finance',username:STATE.user,startDate:monthStart,endDate:STATE.today});
+  STATE.finance = res.ok ? (res.data||[]) : [];
+  renderFinance();
+}
+
+function renderFinance() {
+  const income  = STATE.finance.filter(f=>f.type==='درآمد').reduce((s,f)=>s+Number(f.amount||0),0);
+  const expense = STATE.finance.filter(f=>f.type==='هزینه').reduce((s,f)=>s+Number(f.amount||0),0);
+  document.getElementById('fin-income').textContent = fmt(income);
+  document.getElementById('fin-expense').textContent = fmt(expense);
+  document.getElementById('fin-balance').textContent = fmt(income-expense);
+
+  const el = document.getElementById('trans-list');
+  if (!STATE.finance.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">💰</div><p>اولین تراکنش رو ثبت کن</p></div>'; return; }
+  el.innerHTML = [...STATE.finance].reverse().slice(0,50).map(f=>`
+    <div class="trans-item">
+      <div class="trans-type ${f.type==='درآمد'?'income':'expense'}"></div>
+      <div class="trans-desc">${escHtml(f.desc||'—')}</div>
+      <span class="trans-cat">${f.category||''}</span>
+      <div class="trans-amount ${f.type==='درآمد'?'income':'expense'}">${f.type==='درآمد'?'+':'-'}${fmt(f.amount)}</div>
+      <div class="trans-date">${f.date||''}</div>
+    </div>`).join('');
+}
+
+async function addTransaction() {
+  const payload = {
+    desc:document.getElementById('trans-desc').value,
+    type:document.getElementById('trans-type').value,
+    category:document.getElementById('trans-cat').value,
+    amount:document.getElementById('trans-amount').value,
+    method:document.getElementById('trans-method').value,
+  };
+  if(!payload.desc||!payload.amount) return toast('اطلاعات را کامل کنید','','','error');
+  const res = await apiPost({action:'saveData',section:'finance',username:STATE.user,date:STATE.today,payload});
+  if(res.ok) { toast('ثبت شد ✅','','','success'); document.getElementById('trans-desc').value=''; document.getElementById('trans-amount').value=''; loadFinance(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  FOCUS / TASKS
+// ═══════════════════════════════════════════════════════════
+async function loadFocus() {
+  const res = await apiGet({action:'getData',section:'tasks',username:STATE.user});
+  STATE.focusTasks = res.ok ? (res.data||[]) : [];
+  renderFocusTasks();
+}
+
+function renderFocusTasks() {
+  const el = document.getElementById('focus-list');
+  if (!STATE.focusTasks.length) { el.innerHTML='<div class="empty-state"><div class="empty-icon">🎯</div><p>کارت رو اضافه کن</p></div>'; return; }
+  el.innerHTML = STATE.focusTasks.map((t,i)=>{
+    const prereq = t.prereq ? Number(t.prereq) : 0;
+    const blocked = prereq>0 && !STATE.focusTasks.slice(0,prereq).every(p=>p.status==='✅ تمام');
+    const locked = t.status==='✅ تمام';
+    return `<div class="task-item ${blocked?'prereq-blocked':''} ${locked?'locked-item':''}">
+      <div class="task-check ${locked?'checked':''}" onclick="toggleFocusTask(${i})">
+        ${locked?'✓':''}
+      </div>
+      <div style="flex:1">
+        <div class="text-sm fw-700">${i+1}. ${escHtml(t.title||'')}</div>
+        <div style="display:flex;gap:6px;margin-top:4px">
+          <span class="badge badge-blue">${t.category||'—'}</span>
+          <span class="badge ${t.priority==='🔴 فوری'?'badge-red':t.priority==='🟠 بالا'?'badge-amber':'badge-green'}">${t.priority||'—'}</span>
+          ${prereq?`<span class="badge badge-blue">🔗 نیاز: #${prereq}</span>`:''}
+          ${blocked?'<span class="badge badge-red">🔒 قفل</span>':''}
+        </div>
+      </div>
+      ${!locked&&!blocked?`<span style="color:var(--rose);cursor:pointer;font-size:18px" onclick="deleteFocusTask(${i})">✕</span>`:''}
+    </div>`;
+  }).join('');
+}
+
+async function addFocusTask() {
+  const t = { taskId:Date.now().toString(), title:document.getElementById('focus-title').value,
+    category:document.getElementById('focus-cat').value, priority:document.getElementById('focus-pri').value,
+    prereq:document.getElementById('focus-prereq').value||0, duration:document.getElementById('focus-duration').value||30,
+    status:'⏳ شروع نشده' };
+  if(!t.title) return toast('عنوان کار رو وارد کن','','','error');
+  const res = await apiPost({action:'saveData',section:'tasks',username:STATE.user,payload:t});
+  if(res.ok) { toast('کار اضافه شد ✅','','','success'); document.getElementById('focus-title').value=''; STATE.focusTasks.push(t); renderFocusTasks(); }
+}
+
+async function toggleFocusTask(i) {
+  const t = STATE.focusTasks[i];
+  t.status = t.status==='✅ تمام' ? '⏳ شروع نشده' : '✅ تمام';
+  await apiPost({action:'saveData',section:'tasks',username:STATE.user,payload:t});
+  renderFocusTasks();
+}
+
+async function deleteFocusTask(i) {
+  STATE.focusTasks.splice(i,1);
+  renderFocusTasks();
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SETTINGS
+// ═══════════════════════════════════════════════════════════
+function renderSettings() {
+  const habits = getHabitList();
+  document.getElementById('habit-editor').innerHTML = habits.map((h,i)=>`
+    <div class="habit-edit-item">
+      <span style="color:var(--text-m);font-size:12px;width:20px">${i+1}</span>
+      <input type="text" class="habit-edit-input" value="${escHtml(h)}" data-idx="${i}">
+    </div>`).join('');
+
+  const cats = getCategories();
+  document.getElementById('cat-editor').innerHTML = cats.map((c,i)=>`
+    <div class="habit-edit-item mb-8">
+      <input type="text" class="habit-edit-input" value="${escHtml(c)}" data-cat="${i}">
+    </div>`).join('');
+
+  document.getElementById('set-workhours').value = STATE.settings.workHours||8;
+  document.getElementById('set-toptasks').value = STATE.settings.topTasksCount||3;
+  document.getElementById('set-currency').value = STATE.settings.currency||'تومان';
+  document.getElementById('set-goal').value = STATE.settings.goal100||'';
+}
+
+function addHabitField() {
+  const el = document.getElementById('habit-editor');
+  const count = el.children.length;
+  const div = document.createElement('div');
+  div.className='habit-edit-item';
+  div.innerHTML=`<span style="color:var(--text-m);font-size:12px;width:20px">${count+1}</span><input type="text" class="habit-edit-input" data-idx="${count}" placeholder="عادت جدید...">`;
+  el.appendChild(div);
+}
+
+function addCatField() {
+  const el = document.getElementById('cat-editor');
+  const count = el.children.length;
+  const div = document.createElement('div');
+  div.className='habit-edit-item mb-8';
+  div.innerHTML=`<input type="text" class="habit-edit-input" data-cat="${count}" placeholder="دسته جدید...">`;
+  el.appendChild(div);
+}
+
+function setAccent(color, el) {
+  document.documentElement.style.setProperty('--em', color);
+  document.querySelectorAll('.color-swatch').forEach(s=>s.classList.remove('selected'));
+  el.classList.add('selected');
+  STATE.settings.accent = color;
+}
+
+async function saveAllSettings() {
+  const habits = [...document.querySelectorAll('[data-idx]')].map(i=>i.value).filter(Boolean);
+  const cats = [...document.querySelectorAll('[data-cat]')].map(i=>i.value).filter(Boolean);
+  const payload = {
+    workHours: document.getElementById('set-workhours').value,
+    topTasksCount: document.getElementById('set-toptasks').value,
+    currency: document.getElementById('set-currency').value,
+    goal100: document.getElementById('set-goal').value,
+    habits: JSON.stringify(habits),
+    categories: JSON.stringify(cats),
+    accent: STATE.settings.accent||'',
+    theme: document.documentElement.getAttribute('data-theme')||'dark',
+  };
+  const res = await apiPost({action:'saveData',section:'settings',username:STATE.user,payload});
+  if(res.ok) { STATE.settings={...STATE.settings,...payload}; toast('تنظیمات ذخیره شد ✅','','','success'); applySettings(); }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  SAVE CURRENT PAGE
+// ═══════════════════════════════════════════════════════════
+async function saveCurrentPage() {
+  switch(STATE.currentPage) {
+    case 'daily': await saveDaily(); break;
+    case 'habits': await saveHabits(); break;
+    case 'mood': await saveMood(); break;
+    case 'journal': await saveJournal(); break;
+    case 'settings': await saveAllSettings(); break;
+    default: toast('برای ذخیره دکمه مربوطه رو بزن','','','');
+  }
+}
+
+// ═══════════════════════════════════════════════════════════
+//  THEME
+// ═══════════════════════════════════════════════════════════
+function toggleTheme() {
+  const isLight = document.documentElement.getAttribute('data-theme')==='light';
+  document.documentElement.setAttribute('data-theme', isLight?'dark':'light');
+  document.getElementById('theme-icon').textContent = isLight?'🌙':'☀️';
+  document.getElementById('theme-label').textContent = isLight?'حالت تاریک':'حالت روشن';
+}
+
+// ═══════════════════════════════════════════════════════════
+//  UTILS
+// ═══════════════════════════════════════════════════════════
+function fmt(n) {
+  return Number(n||0).toLocaleString('fa-IR');
+}
+
+function escHtml(str) {
+  return String(str).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+}
+
+function toast(msg, _1, _2, type='') {
+  const el = document.getElementById('toast');
+  el.textContent = msg; el.className = 'show '+(type||'');
+  setTimeout(()=>el.classList.remove('show'),3000);
+}
+
+const quotes = [
+  '"انضباط یعنی انتخاب بین آنچه الان می‌خواهی و آنچه بیشتر از همه می‌خواهی."',
+  '"موفقیت مجموع تلاش‌های کوچک است که روز بعد از روز تکرار می‌شوند." — رابرت کولیر',
+  '"هر روز یک قدم کوچک، در پایان سال ۳۶۵ قدم از بقیه جلوتری."',
+  '"آنچه امروز انجام می‌دهی، فردایت را می‌سازد."',
+  '"شروع کن. ادامه بده. تمام کن." — پیتر دراکر',
+];
+document.getElementById('daily-quote').textContent = quotes[new Date().getDay()%quotes.length];
+
+// Auto-check session
+window.addEventListener('load', ()=>{
+  const saved = localStorage.getItem('lifeOS_user');
+  if (saved && API) {
+    apiGet({action:'getData',section:'settings',username:saved}).then(res=>{
+      if(res.ok){ STATE.user=saved; STATE.settings=res.data||{}; enterApp(); }
+    }).catch(()=>{});
+  }
+});
+
+// Mobile topbar date
+document.getElementById('topbar-date').textContent = new Date().toLocaleDateString('fa-IR',{weekday:'long',day:'numeric',month:'long'});
+</script>
+</body>
+</html>
